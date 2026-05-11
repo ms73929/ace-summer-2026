@@ -6,7 +6,7 @@ const CORS = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-exports.handler = async (event) => {
+exports.handler = async function(event, context) {
   if (event.httpMethod === "OPTIONS") {
     return { statusCode: 204, headers: CORS, body: "" };
   }
@@ -19,7 +19,13 @@ exports.handler = async (event) => {
   }
 
   try {
-    const store = getStore({ name: "ace-team-calendar", consistency: "strong" });
+    const store = getStore({
+      name: "ace-team-calendar",
+      siteID: context.site.id,
+      token: context.token,
+      consistency: "strong",
+    });
+
     let members = [];
     try {
       const raw = await store.get("members");
@@ -41,7 +47,7 @@ exports.handler = async (event) => {
     return {
       statusCode: 500,
       headers: { ...CORS, "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Internal server error", detail: e.message }),
+      body: JSON.stringify({ error: e.message }),
     };
   }
 };

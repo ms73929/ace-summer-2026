@@ -14,8 +14,9 @@ const PALETTE = [
 
 const ADMIN_PASSWORD = "ace-calendar-2026";
 const VALID_REASONS = ["Vacation", "Conference", "Sick", "Personal", "Other"];
+const DEFAULT_PICKER = "#1B6CA8";
 
-exports.handler = async (event) => {
+exports.handler = async function(event, context) {
   if (event.httpMethod === "OPTIONS") {
     return { statusCode: 204, headers: CORS, body: "" };
   }
@@ -38,7 +39,12 @@ exports.handler = async (event) => {
     };
   }
 
-  const store = getStore({ name: "ace-team-calendar", consistency: "strong" });
+  const store = getStore({
+    name: "ace-team-calendar",
+    siteID: context.site.id,
+    token: context.token,
+    consistency: "strong",
+  });
 
   // ── Admin: reassign color ──────────────────────────────────────────────
   if (body.adminAction === "reassign-color") {
@@ -49,7 +55,6 @@ exports.handler = async (event) => {
         body: JSON.stringify({ error: "Unauthorized" }),
       };
     }
-
     const { targetEmail, newColor } = body;
     if (!targetEmail || !newColor) {
       return {
@@ -75,7 +80,6 @@ exports.handler = async (event) => {
         body: JSON.stringify({ error: "Member not found" }),
       };
     }
-
     members[idx].color = newColor;
     members[idx].updatedAt = new Date().toISOString();
     await store.set("members", JSON.stringify(members));
@@ -116,7 +120,7 @@ exports.handler = async (event) => {
       return {
         statusCode: 400,
         headers: { ...CORS, "Content-Type": "application/json" },
-        body: JSON.stringify({ error: `Invalid reason: ${absence.reason}` }),
+        body: JSON.stringify({ error: "Invalid reason: " + absence.reason }),
       };
     }
   }
@@ -137,21 +141,16 @@ exports.handler = async (event) => {
     );
 
     let assignedColor;
-    const DEFAULT_PICKER = "#1B6CA8";
     if (existingIndex >= 0) {
-      // Keep existing color unless user explicitly changed it
-      assignedColor =
-        color && color !== DEFAULT_PICKER
-          ? color
-          : members[existingIndex].color;
+      assignedColor = (color && color !== DEFAULT_PICKER)
+        ? color
+        : members[existingIndex].color;
     } else {
-      // Auto-assign next unused palette slot
       const usedColors = members.map((m) => m.color);
       const nextPalette =
         PALETTE.find((c) => !usedColors.includes(c)) ||
         PALETTE[members.length % PALETTE.length];
-      assignedColor =
-        color && color !== DEFAULT_PICKER ? color : nextPalette;
+      assignedColor = (color && color !== DEFAULT_PICKER) ? color : nextPalette;
     }
 
     const memberRecord = {
@@ -180,7 +179,7 @@ exports.handler = async (event) => {
     return {
       statusCode: 500,
       headers: { ...CORS, "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Internal server error", detail: e.message }),
+      body: JSON.stringify({ error: e.message }),
     };
   }
 };
