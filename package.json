@@ -2,7 +2,6 @@
   "name": "ace-team-calendar",
   "version": "1.0.0",
   "description": "ACE Unit team out-of-office calendar",
-  "type": "module",
   "dependencies": {
     "@netlify/blobs": "^8.0.0"
   }
