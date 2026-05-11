@@ -431,6 +431,12 @@ const BADGE_CLASS = {
   Other:      'badge-other',
 };
 
+// UVA closures — keyed by YYYY-MM-DD
+const HOLIDAYS = {
+  '2026-05-25': 'Memorial Day – UVA Closed',
+  '2026-06-19': 'Juneteenth – UVA Closed',
+};
+
 // ── State ──────────────────────────────────────────────────────────────────
 let allMembers      = [];
 let pendingAbsences = [];
@@ -464,9 +470,9 @@ function weekdaysInRange(start, end) {
   const cur = parseDate(start);
   const fin = parseDate(end);
   while (cur <= fin) {
-    if (!isWeekend(cur)) {
-      const ds = fmt(cur);
-      if (ds >= fmt(CAL_START) && ds <= fmt(CAL_END)) dates.push(ds);
+    const ds = fmt(cur);
+    if (!isWeekend(cur) && !HOLIDAYS[ds] && ds >= fmt(CAL_START) && ds <= fmt(CAL_END)) {
+      dates.push(ds);
     }
     cur.setDate(cur.getDate()+1);
   }
@@ -694,6 +700,22 @@ function renderMonthView(grid, absMap, visible) {
       const isT = isToday(ds);
       const dayStr = dayObj.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'});
       const dim = !inMonth ? 'opacity:.4;' : '';
+      const colSpan = Math.max(visible.length, 1);
+
+      // Holiday row — spans all member columns
+      if (HOLIDAYS[ds]) {
+        html += `<tr>
+          <td style="${dim}">
+            <span class="visually-hidden">${dayObj.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</span>
+            <span aria-hidden="true">${esc(dayStr)}</span>
+          </td>
+          <td colspan="${colSpan}" class="date-cell" style="background:#f0f4f0;${dim}">
+            <span class="absence-chip" style="background:#3d6b4f;color:#fff;display:inline-block"
+                  aria-label="${esc(HOLIDAYS[ds])}">🏛 ${esc(HOLIDAYS[ds])}</span>
+          </td>
+        </tr>`;
+        return;
+      }
 
       html += `<tr>
         <td style="${dim}" class="${isT ? 'today-mark' : ''}">
@@ -759,6 +781,21 @@ function renderWeekView(grid, absMap, visible) {
   if (!visible.length) {
     html += `<tr><td colspan="${week.length+1}" style="padding:1rem;color:var(--text-muted);text-align:center;font-size:.875rem">No team members yet.</td></tr>`;
   } else {
+    // Holiday banner row (if any holiday falls in this week)
+    const weekHasHoliday = week.some(({ds}) => HOLIDAYS[ds]);
+    if (weekHasHoliday) {
+      html += `<tr><td style="font-size:.75rem;font-weight:600;color:var(--text-muted)">UVA Closed</td>`;
+      week.forEach(({ds}) => {
+        html += `<td class="date-cell" style="background:#f0f4f0">`;
+        if (HOLIDAYS[ds]) {
+          html += `<span class="absence-chip" style="background:#3d6b4f;color:#fff"
+                     aria-label="${esc(HOLIDAYS[ds])}">🏛 ${esc(HOLIDAYS[ds])}</span>`;
+        }
+        html += `</td>`;
+      });
+      html += `</tr>`;
+    }
+
     visible.forEach(m => {
       const fg = contrastColor(m.color);
       html += `<tr>
@@ -771,7 +808,8 @@ function renderWeekView(grid, absMap, visible) {
       week.forEach(({ds}) => {
         const entries = (absMap[ds]||[]).filter(e => e.member.email === m.email);
         const isT = isToday(ds);
-        html += `<td class="date-cell ${isT ? 'today-mark' : ''}">`;
+        const isHol = !!HOLIDAYS[ds];
+        html += `<td class="date-cell ${isT ? 'today-mark' : ''}" style="${isHol ? 'background:#f0f4f0;opacity:.5;' : ''}">`;
         entries.forEach(e => {
           const dr = e.absence.reason === 'Other' && e.absence.note ? e.absence.note : e.absence.reason;
           html += `<span class="absence-chip" style="background:${esc(m.color)};color:${fg}"
