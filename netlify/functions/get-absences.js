@@ -22,7 +22,12 @@ exports.handler = async function(event, context) {
   }
 
   try {
-    const store = getStore({ name: 'ace-team-calendar', consistency: 'strong' });
+    const store = getStore({
+      name: 'ace-team-calendar',
+      consistency: 'strong',
+      siteID: process.env.SITE_ID,
+      token:  process.env.NETLIFY_TOKEN,
+    });
 
     let members = [];
     try {
