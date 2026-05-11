@@ -1,93 +1,93 @@
-const { getStore } = require("@netlify/blobs");
+// Uses CommonJS (require) so no package.json "type":"module" is needed.
+
+const { getStore } = require('@netlify/blobs');
 
 const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
 };
 
 const PALETTE = [
-  "#1B6CA8", "#C0392B", "#1E8449", "#7D3C98",
-  "#CA6F1E", "#117A65", "#884EA0", "#1A5276",
-  "#B03A2E", "#196F3D", "#6C3483", "#9A7D0A",
+  '#1B6CA8', '#C0392B', '#1E8449', '#7D3C98',
+  '#CA6F1E', '#117A65', '#884EA0', '#1A5276',
+  '#B03A2E', '#196F3D', '#6C3483', '#9A7D0A',
 ];
 
-const ADMIN_PASSWORD = "ace-calendar-2026";
-const VALID_REASONS = ["Vacation", "Conference", "Sick", "Personal", "Other"];
-const DEFAULT_PICKER = "#1B6CA8";
+const ADMIN_PASSWORD = 'ace-calendar-2026';
+const VALID_REASONS  = ['Vacation', 'Conference', 'Sick', 'Personal', 'Other'];
+const DEFAULT_PICKER = '#1B6CA8';
 
 exports.handler = async function(event, context) {
-  if (event.httpMethod === "OPTIONS") {
-    return { statusCode: 204, headers: CORS, body: "" };
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 204, headers: CORS, body: '' };
   }
-  if (event.httpMethod !== "POST") {
+
+  if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
-      headers: { ...CORS, "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Method not allowed" }),
+      headers: { ...CORS, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Method not allowed' })
     };
   }
 
   let body;
   try {
     body = JSON.parse(event.body);
-  } catch (_) {
+  } catch(_) {
     return {
       statusCode: 400,
-      headers: { ...CORS, "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Invalid JSON" }),
+      headers: { ...CORS, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Invalid JSON' })
     };
   }
 
-  const store = getStore({
-    name: "ace-team-calendar",
-    siteID: context.site.id,
-    token: context.token,
-    consistency: "strong",
-  });
+  const store = getStore({ name: 'ace-team-calendar', consistency: 'strong' });
 
-  // ── Admin: reassign color ──────────────────────────────────────────────
-  if (body.adminAction === "reassign-color") {
+  // ── Admin: reassign color ─────────────────────────────────────────────
+  if (body.adminAction === 'reassign-color') {
     if (body.adminPassword !== ADMIN_PASSWORD) {
       return {
         statusCode: 401,
-        headers: { ...CORS, "Content-Type": "application/json" },
-        body: JSON.stringify({ error: "Unauthorized" }),
+        headers: { ...CORS, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'Unauthorized' })
       };
     }
+
     const { targetEmail, newColor } = body;
     if (!targetEmail || !newColor) {
       return {
         statusCode: 400,
-        headers: { ...CORS, "Content-Type": "application/json" },
-        body: JSON.stringify({ error: "targetEmail and newColor required" }),
+        headers: { ...CORS, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'targetEmail and newColor required' })
       };
     }
 
     let members = [];
     try {
-      const raw = await store.get("members");
+      const raw = await store.get('members');
       if (raw) members = JSON.parse(raw);
-    } catch (_) { members = []; }
+    } catch(_) { members = []; }
 
     const idx = members.findIndex(
-      (m) => m.email.toLowerCase() === targetEmail.toLowerCase()
+      m => m.email.toLowerCase() === targetEmail.toLowerCase()
     );
     if (idx < 0) {
       return {
         statusCode: 404,
-        headers: { ...CORS, "Content-Type": "application/json" },
-        body: JSON.stringify({ error: "Member not found" }),
+        headers: { ...CORS, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'Member not found' })
       };
     }
-    members[idx].color = newColor;
+
+    members[idx].color     = newColor;
     members[idx].updatedAt = new Date().toISOString();
-    await store.set("members", JSON.stringify(members));
+    await store.set('members', JSON.stringify(members));
 
     return {
       statusCode: 200,
-      headers: { ...CORS, "Content-Type": "application/json" },
-      body: JSON.stringify({ success: true, members }),
+      headers: { ...CORS, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ success: true, members })
     };
   }
 
@@ -97,30 +97,30 @@ exports.handler = async function(event, context) {
   if (!name || !email) {
     return {
       statusCode: 400,
-      headers: { ...CORS, "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Name and email are required" }),
+      headers: { ...CORS, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Name and email are required' })
     };
   }
   if (!Array.isArray(absences)) {
     return {
       statusCode: 400,
-      headers: { ...CORS, "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Absences must be an array" }),
+      headers: { ...CORS, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Absences must be an array' })
     };
   }
   for (const absence of absences) {
     if (!absence.date || !/^\d{4}-\d{2}-\d{2}$/.test(absence.date)) {
       return {
         statusCode: 400,
-        headers: { ...CORS, "Content-Type": "application/json" },
-        body: JSON.stringify({ error: "Each absence must have a valid YYYY-MM-DD date" }),
+        headers: { ...CORS, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'Each absence needs a valid YYYY-MM-DD date' })
       };
     }
     if (!VALID_REASONS.includes(absence.reason)) {
       return {
         statusCode: 400,
-        headers: { ...CORS, "Content-Type": "application/json" },
-        body: JSON.stringify({ error: "Invalid reason: " + absence.reason }),
+        headers: { ...CORS, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'Invalid reason: ' + absence.reason })
       };
     }
   }
@@ -128,16 +128,16 @@ exports.handler = async function(event, context) {
   try {
     let members = [];
     try {
-      const raw = await store.get("members");
+      const raw = await store.get('members');
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) members = parsed;
       }
-    } catch (_) { members = []; }
+    } catch(_) { members = []; }
 
     const normalizedEmail = email.toLowerCase().trim();
-    const existingIndex = members.findIndex(
-      (m) => m.email.toLowerCase() === normalizedEmail
+    const existingIndex   = members.findIndex(
+      m => m.email.toLowerCase() === normalizedEmail
     );
 
     let assignedColor;
@@ -146,17 +146,16 @@ exports.handler = async function(event, context) {
         ? color
         : members[existingIndex].color;
     } else {
-      const usedColors = members.map((m) => m.color);
-      const nextPalette =
-        PALETTE.find((c) => !usedColors.includes(c)) ||
-        PALETTE[members.length % PALETTE.length];
+      const usedColors  = members.map(m => m.color);
+      const nextPalette = PALETTE.find(c => !usedColors.includes(c))
+                       || PALETTE[members.length % PALETTE.length];
       assignedColor = (color && color !== DEFAULT_PICKER) ? color : nextPalette;
     }
 
     const memberRecord = {
-      name: name.trim(),
-      email: normalizedEmail,
-      color: assignedColor,
+      name:      name.trim(),
+      email:     normalizedEmail,
+      color:     assignedColor,
       absences,
       updatedAt: new Date().toISOString(),
     };
@@ -167,19 +166,19 @@ exports.handler = async function(event, context) {
       members.push(memberRecord);
     }
 
-    await store.set("members", JSON.stringify(members));
+    await store.set('members', JSON.stringify(members));
 
     return {
       statusCode: 200,
-      headers: { ...CORS, "Content-Type": "application/json" },
-      body: JSON.stringify({ success: true, member: memberRecord }),
+      headers: { ...CORS, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ success: true, member: memberRecord })
     };
-  } catch (e) {
-    console.error("save-absences error:", e);
+  } catch(e) {
+    console.error('save-absences error:', e);
     return {
       statusCode: 500,
-      headers: { ...CORS, "Content-Type": "application/json" },
-      body: JSON.stringify({ error: e.message }),
+      headers: { ...CORS, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Internal server error', detail: e.message })
     };
   }
 };
