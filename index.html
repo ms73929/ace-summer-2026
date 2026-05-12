@@ -279,11 +279,11 @@
               <label for="inp-reason">Reason <span class="req" aria-label="required">*</span></label>
               <select id="inp-reason">
                 <option value="">— Select —</option>
-                <option value="Vacation">Vacation</option>
-                <option value="Conference">Conference</option>
-                <option value="Sick">Sick</option>
-                <option value="Personal">Personal</option>
-                <option value="Other">Other</option>
+                <option value="Vacation">🌴 Vacation</option>
+                <option value="Conference">🎓 Conference</option>
+                <option value="Sick">🤒 Sick</option>
+                <option value="Personal">🌻 Personal</option>
+                <option value="Other">📝 Other</option>
               </select>
             </div>
             <div class="field" id="other-note-field" hidden>
@@ -428,6 +428,20 @@ const BADGE_CLASS = {
   Personal:   'badge-personal',
   Other:      'badge-other',
 };
+
+const REASON_ICONS = {
+  Vacation:   '🌴',
+  Conference: '🎓',
+  Sick:       '🤒',
+  Personal:   '🌻',
+  Other:      '📝',
+};
+
+function iconLabel(reason, note) {
+  const icon = REASON_ICONS[reason] || '';
+  const label = (reason === 'Other' && note) ? note : reason;
+  return `${icon} ${label}`.trim();
+}
 
 // UVA closures — keyed by YYYY-MM-DD
 const HOLIDAYS = {
@@ -578,7 +592,7 @@ function renderPendingList() {
   }
   ul.innerHTML = '';
   pendingAbsences.forEach((a, i) => {
-    const displayReason = a.reason === 'Other' && a.note ? a.note : a.reason;
+    const displayReason = iconLabel(a.reason, a.note);
     const li = document.createElement('li');
     li.className = 'absence-item';
     li.innerHTML = `
@@ -725,7 +739,7 @@ function renderMonthView(grid, absMap, visible) {
           const entries = (absMap[ds]||[]).filter(e => e.member.email === m.email);
           html += `<td class="date-cell ${isT ? 'today-mark' : ''}" style="${dim}">`;
           entries.forEach(e => {
-            const dr = e.absence.reason === 'Other' && e.absence.note ? e.absence.note : e.absence.reason;
+            const dr = iconLabel(e.absence.reason, e.absence.note);
             const fg = contrastColor(m.color);
             html += `<span class="absence-chip" style="background:${esc(m.color)};color:${fg}"
                        title="${esc(m.name)}: ${esc(dr)}"
@@ -806,7 +820,7 @@ function renderWeekView(grid, absMap, visible) {
         const isHol = !!HOLIDAYS[ds];
         html += `<td class="date-cell ${isT ? 'today-mark' : ''}" style="${isHol ? 'background:#f0f4f0;opacity:.5;' : ''}">`;
         entries.forEach(e => {
-          const dr = e.absence.reason === 'Other' && e.absence.note ? e.absence.note : e.absence.reason;
+          const dr = iconLabel(e.absence.reason, e.absence.note);
           html += `<span class="absence-chip" style="background:${esc(m.color)};color:${fg}"
                      aria-label="${esc(m.name)} out — ${esc(dr)}">${esc(dr)}</span>`;
         });
@@ -965,7 +979,7 @@ function renderLookupResult(email) {
   } else {
     absHtml = `<ul class="absence-list" aria-label="Your recorded absences" style="margin-top:.5rem">`;
     member.absences.forEach(a => {
-      const dr = a.reason === 'Other' && a.note ? a.note : a.reason;
+      const dr = iconLabel(a.reason, a.note);
       absHtml += `<li class="absence-item">
         <span class="absence-date">${esc(a.date)}</span>
         <span class="badge ${BADGE_CLASS[a.reason]||'badge-other'}">${esc(dr)}</span>
