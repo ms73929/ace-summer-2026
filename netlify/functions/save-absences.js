@@ -15,7 +15,7 @@ const PALETTE = [
 ];
 
 const ADMIN_PASSWORD = "ace-calendar-2026";
-const VALID_REASONS  = ["Vacation", "Conference", "Sick", "Personal", "MYOB", "Other", ""];
+const VALID_REASONS  = ["Vacation", "Conference", "Personal", "MYOB", "Other", ""];
 const DEFAULT_PICKER = "#1B6CA8";
 
 export default async (req, context) => {
