@@ -96,7 +96,7 @@
     .badge { display: inline-block; padding: .13rem .42rem; border-radius: 99px; font-size: .7rem; font-weight: 700; letter-spacing: .02em; white-space: nowrap; }
     .badge-vacation   { background: #dbeafe; color: #1e3a8a; }
     .badge-conference { background: #ede9fe; color: #3b0764; }
-    .badge-sick       { background: #fee2e2; color: #7f1d1d; }
+    
     .badge-personal   { background: #fef3c7; color: #78350f; }
     .badge-myob       { background: #fef9c3; color: #713f12; }
     .badge-other      { background: #f3f4f6; color: #1f2937; }
@@ -289,7 +289,7 @@
                 <option value="">— No reason provided —</option>
                 <option value="Vacation">🌴 Vacation</option>
                 <option value="Conference">🎓 Conference</option>
-                <option value="Sick">🤒 Sick</option>
+                
                 <option value="Personal">🌻 Personal</option>
                 <option value="MYOB">🐝 Mind Your Own Business</option>
                 <option value="Other">📝 Other</option>
@@ -433,15 +433,15 @@ const PALETTE = [
   '#3D5A80','#5C7A00','#1A4A7A','#8C1F4D',
 ];
 
-const VALID_REASONS = ['Vacation','Conference','Sick','Personal','Other'];
+const VALID_REASONS = ['Vacation','Conference','Personal','Other'];
 
 const BADGE_CLASS = {
   Vacation:'badge-vacation', Conference:'badge-conference',
-  Sick:'badge-sick', Personal:'badge-personal', MYOB:'badge-myob', Other:'badge-other', '':'badge-out',
+  Personal:'badge-personal', MYOB:'badge-myob', Other:'badge-other', '':'badge-out',
 };
 
 const REASON_ICONS = {
-  Vacation:'🌴', Conference:'🎓', Sick:'🤒', Personal:'🌻', MYOB:'🐝', Other:'📝', '':'📅',
+  Vacation:'🌴', Conference:'🎓', Personal:'🌻', MYOB:'🐝', Other:'📝', '':'📅',
 };
 
 const HOLIDAYS = {
