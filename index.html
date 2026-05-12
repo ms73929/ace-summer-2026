@@ -357,7 +357,7 @@
             </div>
           </div>
 
-          <div class="filter-bar" role="group" aria-label="Filter by team member">
+          <div class="filter-bar" role="group" aria-label="Filter by team member — select one or more">
             <button class="filter-pill filter-all active" id="filter-all" aria-pressed="true">All</button>
             <span id="filter-pills-container" style="display:contents"></span>
           </div>
@@ -453,7 +453,7 @@ const HOLIDAYS = {
 // ── State ──────────────────────────────────────────────────────────────────
 let allMembers      = [];
 let pendingAbsences = [];
-let activeFilter    = 'ALL';
+let activeFilters   = new Set(); // empty = show all
 let currentView     = 'month';
 let currentMonth    = 5;
 let currentYear     = 2026;
@@ -611,22 +611,29 @@ function renderFilterPills() {
   container.innerHTML = '';
 
   allMembers.forEach(m => {
-    const isActive = activeFilter === m.email;
+    const isActive = activeFilters.has(m.email);
     const btn = document.createElement('button');
     btn.className = `filter-pill${isActive ? ' active' : ''}`;
     btn.dataset.member = m.email;
     btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     if (isActive) { btn.style.background = m.color; btn.style.borderColor = m.color; }
     btn.innerHTML = `<span class="fp-swatch" style="background:${esc(m.color)}" aria-hidden="true"></span>${esc(m.name)}`;
-    btn.addEventListener('click', () => setFilter(m.email));
+    btn.addEventListener('click', () => toggleFilter(m.email));
     container.appendChild(btn);
   });
 }
 
-function setFilter(email) {
-  activeFilter = email;
-  $('filter-all').classList.toggle('active', email === 'ALL');
-  $('filter-all').setAttribute('aria-pressed', email === 'ALL' ? 'true' : 'false');
+function toggleFilter(email) {
+  if (activeFilters.has(email)) {
+    activeFilters.delete(email);
+  } else {
+    activeFilters.add(email);
+  }
+  // Update All pill — active when nothing selected
+  const allPill = $('filter-all');
+  const showingAll = activeFilters.size === 0;
+  allPill.classList.toggle('active', showingAll);
+  allPill.setAttribute('aria-pressed', showingAll ? 'true' : 'false');
   renderFilterPills();
   renderCalendar();
 }
@@ -634,7 +641,7 @@ function setFilter(email) {
 // ── Calendar ───────────────────────────────────────────────────────────────
 function buildAbsenceMap() {
   const map = {};
-  const visible = activeFilter === 'ALL' ? allMembers : allMembers.filter(m => m.email === activeFilter);
+  const visible = activeFilters.size === 0 ? allMembers : allMembers.filter(m => activeFilters.has(m.email));
   visible.forEach(m => {
     (m.absences || []).forEach(a => {
       if (!map[a.date]) map[a.date] = [];
@@ -673,7 +680,7 @@ function getMonthWeekdays(year, month) {
 function renderCalendar() {
   const grid = $('cal-grid');
   const absMap = buildAbsenceMap();
-  const visible = activeFilter === 'ALL' ? allMembers : allMembers.filter(m => m.email === activeFilter);
+  const visible = activeFilters.size === 0 ? allMembers : allMembers.filter(m => activeFilters.has(m.email));
 
   if (currentView === 'month') {
     renderMonthView(grid, absMap, visible);
@@ -1140,7 +1147,13 @@ $('view-select').addEventListener('change', function() {
   renderCalendar();
 });
 
-$('filter-all').addEventListener('click', () => setFilter('ALL'));
+$('filter-all').addEventListener('click', () => {
+  activeFilters.clear();
+  $('filter-all').classList.add('active');
+  $('filter-all').setAttribute('aria-pressed', 'true');
+  renderFilterPills();
+  renderCalendar();
+});
 
 $('btn-lookup').addEventListener('click', async () => {
   const email = $('lu-email').value.trim();
