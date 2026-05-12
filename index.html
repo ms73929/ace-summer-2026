@@ -98,7 +98,9 @@
     .badge-conference { background: #ede9fe; color: #3b0764; }
     .badge-sick       { background: #fee2e2; color: #7f1d1d; }
     .badge-personal   { background: #fef3c7; color: #78350f; }
+    .badge-myob       { background: #fef9c3; color: #713f12; }
     .badge-other      { background: #f3f4f6; color: #1f2937; }
+    .badge-out        { background: #e5e7eb; color: #374151; }
 
     .status-msg { padding: .6rem .85rem; border-radius: var(--radius); font-size: .875rem; margin-top: .75rem; display: none; }
     .status-msg.show { display: block; }
@@ -282,13 +284,14 @@
             </div>
 
             <div class="field">
-              <label for="inp-reason">Reason <span class="req" aria-label="required">*</span></label>
+              <label for="inp-reason">Reason <span class="hint" style="font-weight:400">(optional)</span></label>
               <select id="inp-reason">
-                <option value="">— Select —</option>
+                <option value="">— No reason provided —</option>
                 <option value="Vacation">🌴 Vacation</option>
                 <option value="Conference">🎓 Conference</option>
                 <option value="Sick">🤒 Sick</option>
                 <option value="Personal">🌻 Personal</option>
+                <option value="MYOB">🐝 Mind Your Own Business</option>
                 <option value="Other">📝 Other</option>
               </select>
             </div>
@@ -434,11 +437,11 @@ const VALID_REASONS = ['Vacation','Conference','Sick','Personal','Other'];
 
 const BADGE_CLASS = {
   Vacation:'badge-vacation', Conference:'badge-conference',
-  Sick:'badge-sick', Personal:'badge-personal', Other:'badge-other',
+  Sick:'badge-sick', Personal:'badge-personal', MYOB:'badge-myob', Other:'badge-other', '':'badge-out',
 };
 
 const REASON_ICONS = {
-  Vacation:'🌴', Conference:'🎓', Sick:'🤒', Personal:'🌻', Other:'📝',
+  Vacation:'🌴', Conference:'🎓', Sick:'🤒', Personal:'🌻', MYOB:'🐝', Other:'📝', '':'📅',
 };
 
 const HOLIDAYS = {
@@ -491,10 +494,19 @@ function monthName(m) {
   return ['','January','February','March','April','May','June','July','August','September','October','November','December'][m];
 }
 
+function chipTooltip(reason, note) {
+  if (reason === 'MYOB') return '🐝 Mind Your Own Business';
+  if (reason === 'Other' && note) return `📝 ${note}`;
+  if (!reason) return 'Out';
+  return iconLabel(reason, note);
+}
+
 function iconLabel(reason, note) {
-  const icon = REASON_ICONS[reason]||'';
-  const label = (reason==='Other'&&note) ? note : reason;
-  return `${icon} ${label}`.trim();
+  if (reason === 'Other' && note) return `📝 ${note}`;
+  if (reason === 'MYOB') return '🐝 Out';
+  if (!reason) return '📅 Out';
+  const icon = REASON_ICONS[reason] || '📅';
+  return `${icon} ${reason}`.trim();
 }
 
 // ── WCAG contrast check (4.5:1 against white) ─────────────────────────────
@@ -721,9 +733,10 @@ function renderMonthView(grid, absMap) {
         html+=`<div class="chip-wrap">`;
         entries.forEach(e=>{
           const firstName=e.member.name.split(' ')[0];
-          const icon=REASON_ICONS[e.absence.reason]||'📝';
-          const reason=iconLabel(e.absence.reason,e.absence.note);
-          html+=`<span class="absence-chip" style="background:${esc(e.member.color)}" tabindex="0" aria-label="${esc(e.member.name)} — ${esc(reason)}">${esc(icon)} ${esc(firstName)}<span class="chip-tooltip">${esc(e.member.name)} — ${esc(reason)}</span></span>`;
+          const icon=REASON_ICONS[e.absence.reason]||'📅';
+          const chipLabel=iconLabel(e.absence.reason,e.absence.note);
+          const tooltip=chipTooltip(e.absence.reason,e.absence.note);
+          html+=`<span class="absence-chip" style="background:${esc(e.member.color)}" tabindex="0" aria-label="${esc(e.member.name)} — ${esc(tooltip)}">${esc(icon)} ${esc(firstName)}<span class="chip-tooltip">${esc(e.member.name)} — ${esc(tooltip)}</span></span>`;
         });
         html+=`</div>`;
       } else {
@@ -792,10 +805,10 @@ function renderWeekView(grid, absMap) {
         const isT=isToday(ds), isHol=!!HOLIDAYS[ds];
         html+=`<td class="week-cell ${isT?'today-mark':''}" style="${isHol?'opacity:.4':''}">`;
         entries.forEach(e=>{
-          const icon=REASON_ICONS[e.absence.reason]||'📝';
-          const reason=iconLabel(e.absence.reason,e.absence.note);
+          const icon=REASON_ICONS[e.absence.reason]||'📅';
+          const tooltip=chipTooltip(e.absence.reason,e.absence.note);
           const firstName=m.name.split(' ')[0];
-          html+=`<span class="absence-chip" style="background:${esc(m.color)}" tabindex="0" aria-label="${esc(m.name)} — ${esc(reason)}">${esc(icon)} ${esc(firstName)}<span class="chip-tooltip">${esc(m.name)} — ${esc(reason)}</span></span>`;
+          html+=`<span class="absence-chip" style="background:${esc(m.color)}" tabindex="0" aria-label="${esc(m.name)} — ${esc(tooltip)}">${esc(icon)} ${esc(firstName)}<span class="chip-tooltip">${esc(m.name)} — ${esc(tooltip)}</span></span>`;
         });
         html+=`</td>`;
       });
@@ -996,7 +1009,6 @@ $('btn-add-dates').addEventListener('click',()=>{
   const start=$('inp-start').value, end=$('inp-end').value||start;
   const reason=$('inp-reason').value, note=$('inp-other-note').value.trim();
   if (!start){setStatus('form-status','Please select a start date.','error');return;}
-  if (!reason){setStatus('form-status','Please select a reason.','error');return;}
   if (start>end){setStatus('form-status','End date must be on or after start date.','error');return;}
   const dates=weekdaysInRange(start,end);
   if (!dates.length){setStatus('form-status','No weekdays found in that range within May 11–Aug 25.','error');return;}
