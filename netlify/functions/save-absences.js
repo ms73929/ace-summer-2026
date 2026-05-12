@@ -15,7 +15,7 @@ const PALETTE = [
 ];
 
 const ADMIN_PASSWORD = "ace-calendar-2026";
-const VALID_REASONS  = ["Vacation", "Conference", "Sick", "Personal", "Other"];
+const VALID_REASONS  = ["Vacation", "Conference", "Sick", "Personal", "MYOB", "Other", ""];
 const DEFAULT_PICKER = "#1B6CA8";
 
 export default async (req, context) => {
@@ -40,6 +40,43 @@ export default async (req, context) => {
   }
 
   const store = getStore({ name: "ace-team-calendar", consistency: "strong" });
+
+  // ── Admin: delete member ──────────────────────────────────────────────
+  if (body.adminAction === "delete-member") {
+    if (body.adminPassword !== ADMIN_PASSWORD) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...CORS, "Content-Type": "application/json" },
+      });
+    }
+    const { targetEmail } = body;
+    if (!targetEmail) {
+      return new Response(JSON.stringify({ error: "targetEmail required" }), {
+        status: 400,
+        headers: { ...CORS, "Content-Type": "application/json" },
+      });
+    }
+
+    let members = [];
+    try {
+      const raw = await store.get("members");
+      if (raw) members = JSON.parse(raw);
+    } catch (_) { members = []; }
+
+    const before = members.length;
+    members = members.filter(m => m.email.toLowerCase() !== targetEmail.toLowerCase());
+    if (members.length === before) {
+      return new Response(JSON.stringify({ error: "Member not found" }), {
+        status: 404,
+        headers: { ...CORS, "Content-Type": "application/json" },
+      });
+    }
+    await store.set("members", JSON.stringify(members));
+    return new Response(JSON.stringify({ success: true, members }), {
+      status: 200,
+      headers: { ...CORS, "Content-Type": "application/json" },
+    });
+  }
 
   // ── Admin: reassign color ─────────────────────────────────────────────
   if (body.adminAction === "reassign-color") {
