@@ -96,7 +96,6 @@
     .badge { display: inline-block; padding: .13rem .42rem; border-radius: 99px; font-size: .7rem; font-weight: 700; letter-spacing: .02em; white-space: nowrap; }
     .badge-vacation   { background: #dbeafe; color: #1e3a8a; }
     .badge-conference { background: #ede9fe; color: #3b0764; }
-    
     .badge-personal   { background: #fef3c7; color: #78350f; }
     .badge-myob       { background: #fef9c3; color: #713f12; }
     .badge-other      { background: #f3f4f6; color: #1f2937; }
@@ -189,6 +188,9 @@
     .admin-save-color { background: var(--accent); color: #fff; border: none; border-radius: var(--radius); padding: .28rem .55rem; font: inherit; font-size: .75rem; cursor: pointer; }
     .admin-save-color:not(:disabled):hover { background: var(--accent-dark); }
     .admin-save-color:disabled { opacity: .5; cursor: not-allowed; }
+    .admin-delete-member { background: none; border: 1.5px solid var(--error); color: var(--error); border-radius: var(--radius); padding: .28rem .55rem; font: inherit; font-size: .75rem; cursor: pointer; }
+    .admin-delete-member:hover { background: var(--error-light); }
+    .admin-delete-member:disabled { opacity: .5; cursor: not-allowed; }
     .admin-contrast-warn { font-size: .72rem; color: var(--error); margin-top: .25rem; display: none; width: 100%; }
 
     /* Palette swatches — admin only */
@@ -289,7 +291,6 @@
                 <option value="">— No reason provided —</option>
                 <option value="Vacation">🌴 Vacation</option>
                 <option value="Conference">🎓 Conference</option>
-                
                 <option value="Personal">🌻 Personal</option>
                 <option value="MYOB">🐝 Mind Your Own Business</option>
                 <option value="Other">📝 Other</option>
@@ -433,7 +434,7 @@ const PALETTE = [
   '#3D5A80','#5C7A00','#1A4A7A','#8C1F4D',
 ];
 
-const VALID_REASONS = ['Vacation','Conference','Personal','Other'];
+const VALID_REASONS = ['Vacation','Conference','Personal','MYOB','Other',''];
 
 const BADGE_CLASS = {
   Vacation:'badge-vacation', Conference:'badge-conference',
@@ -601,6 +602,16 @@ async function adminReassignColor(targetEmail, newColor) {
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error||'Reassign failed');
+  return data;
+}
+
+async function adminDeleteMember(targetEmail) {
+  const res = await fetch(`${BASE_URL}/.netlify/functions/save-absences`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({adminAction:'delete-member',adminPassword:ADMIN_PW,targetEmail}),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error||'Delete failed');
   return data;
 }
 
@@ -849,6 +860,7 @@ function renderAdminMemberList() {
           <label for="${esc(inputId)}" class="visually-hidden">Color for ${esc(m.name)}</label>
           <input type="color" id="${esc(inputId)}" value="${esc(m.color)}" data-email="${esc(m.email)}" />
           <button class="admin-save-color" data-email="${esc(m.email)}" data-input="${esc(inputId)}" data-warn="${esc(warnId)}" aria-label="Save color for ${esc(m.name)}">Save</button>
+          <button class="admin-delete-member" data-email="${esc(m.email)}" data-name="${esc(m.name)}" aria-label="Delete ${esc(m.name)}">Delete</button>
         </div>
         <span class="admin-contrast-warn" id="${esc(warnId)}">⛔ Contrast too low — must be 4.5:1 against white.</span>
       </div>`;
@@ -895,6 +907,25 @@ function renderAdminMemberList() {
         setStatus('admin-save-status',`Error: ${err.message}`,'error');
       } finally {
         e.target.disabled=false; e.target.textContent='Save';
+      }
+    });
+
+    // Delete button
+    row.querySelector('.admin-delete-member').addEventListener('click', async(e)=>{
+      const name=e.target.dataset.name;
+      const email=e.target.dataset.email;
+      if (!confirm(`Remove ${name} from the calendar? This will delete all their recorded dates. This cannot be undone.`)) return;
+      e.target.disabled=true; e.target.textContent='…';
+      try {
+        const result=await adminDeleteMember(email);
+        allMembers=result.members;
+        activeFilters.delete(email);
+        setStatus('admin-save-status',`${name} has been removed.`,'success');
+        renderAdminMemberList();
+        renderFilterPills(); renderCalendar();
+      } catch(err) {
+        setStatus('admin-save-status',`Error: ${err.message}`,'error');
+        e.target.disabled=false; e.target.textContent='Delete';
       }
     });
 
