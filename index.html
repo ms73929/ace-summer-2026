@@ -181,6 +181,7 @@
     .admin-save-color:hover { background: var(--accent-dark); }
 
     /* Palette swatch row */
+    /* palette swatches — admin panel only */
     .palette-preview { display: flex; gap: .3rem; flex-wrap: wrap; margin: .4rem 0 .75rem; }
     .palette-swatch { width: 1.3rem; height: 1.3rem; border-radius: 3px; border: 2px solid rgba(0,0,0,.12); cursor: pointer; }
     .palette-swatch:hover { transform: scale(1.15); }
@@ -253,14 +254,11 @@
             <div class="field">
               <label for="inp-color">Your Calendar Color</label>
               <div class="color-row">
-                <input type="color" id="inp-color" value="#1B6CA8" aria-describedby="color-note" />
-                <div id="color-preview-wrap" class="color-preview">
-                  <span class="color-swatch" id="color-swatch-preview" style="background:#1B6CA8" aria-hidden="true"></span>
-                  <span id="color-preview-label">Auto-assigned on first save</span>
-                </div>
+                <input type="color" id="inp-color" value="#1B6CA8" aria-describedby="color-note color-conflict" />
+                <span class="color-swatch" id="color-swatch-preview" style="background:#1B6CA8" aria-hidden="true"></span>
               </div>
-              <p id="color-note" class="hint">A unique color will be auto-assigned when you first save. You can override it here.</p>
-              <div class="palette-preview" role="group" aria-label="Suggested palette colors" id="palette-row"></div>
+              <p id="color-note" class="hint">Pick any color — it will identify your absences on the calendar.</p>
+              <p id="color-conflict" class="hint" style="color:var(--warn);display:none" role="alert"></p>
             </div>
 
             <hr class="divider" aria-hidden="true" />
@@ -508,34 +506,30 @@ function monthName(m) {
   return ['','January','February','March','April','May','June','July','August','September','October','November','December'][m];
 }
 
-// ── Palette row in form ────────────────────────────────────────────────────
-function renderPaletteRow() {
-  const row = $('palette-row');
-  row.innerHTML = '';
-  PALETTE.forEach(c => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'palette-swatch';
-    btn.style.background = c;
-    btn.setAttribute('aria-label', `Select color ${c}`);
-    btn.setAttribute('title', c);
-    btn.addEventListener('click', () => {
-      $('inp-color').value = c;
-      updateColorPreview(c);
-      row.querySelectorAll('.palette-swatch').forEach(s => s.classList.remove('selected'));
-      btn.classList.add('selected');
-    });
-    row.appendChild(btn);
-  });
-}
 
 function updateColorPreview(hex) {
   $('color-swatch-preview').style.background = hex;
 }
 
+function checkColorConflict(hex) {
+  const email = $('inp-email').value.trim().toLowerCase();
+  const conflict = allMembers.find(m =>
+    m.color.toLowerCase() === hex.toLowerCase() &&
+    m.email.toLowerCase() !== email
+  );
+  const el = $('color-conflict');
+  if (conflict) {
+    el.textContent = `⚠ This color is already used by ${conflict.name}. Consider picking a different one.`;
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+    el.textContent = '';
+  }
+}
+
 $('inp-color').addEventListener('input', function() {
   updateColorPreview(this.value);
-  $('palette-row').querySelectorAll('.palette-swatch').forEach(s => s.classList.remove('selected'));
+  checkColorConflict(this.value);
 });
 
 // ── API ────────────────────────────────────────────────────────────────────
@@ -994,6 +988,7 @@ function renderLookupResult(email) {
     $('inp-email').value = member.email;
     $('inp-color').value = member.color;
     updateColorPreview(member.color);
+    checkColorConflict(member.color);
     pendingAbsences = [...(member.absences||[])];
     renderPendingList();
     switchTab('tab-add');
@@ -1144,7 +1139,6 @@ $('btn-lookup').addEventListener('click', async () => {
 
 // ── Init ───────────────────────────────────────────────────────────────────
 (async () => {
-  renderPaletteRow();
   renderPendingList();
   updateCalHeading();
   await fetchMembers();
